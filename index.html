@@ -3,1290 +3,579 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>INGL 3015 – Attendance</title>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<!-- SheetJS for Excel -->
+<title>Faculty Course Schedule · UPRA English Department</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-<!-- Google Font -->
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ══════════════════════════════════════
-   VARIABLES & RESET
-══════════════════════════════════════ */
-:root {
-  --navy:        #0f2545;
-  --navy-mid:    #1b3a6b;
-  --teal:        #1a7f6e;
-  --teal-light:  #e6f4f1;
-  --gold:        #c99a2e;
-  --gold-light:  #fdf6e3;
-  --danger:      #b83232;
-  --danger-light:#fdecea;
-  --surface:     #f7f8fc;
-  --white:       #ffffff;
-  --text:        #1a1f2e;
-  --muted:       #6b7280;
-  --border:      #e2e6ef;
-  --shadow-sm:   0 2px 8px rgba(15,37,69,.08);
-  --shadow-md:   0 6px 24px rgba(15,37,69,.12);
-  --shadow-lg:   0 12px 48px rgba(15,37,69,.16);
-  --r:           14px;
-  --r-sm:        8px;
+:root{
+  --navy:#0a2342; --navy-2:#102a4c; --navy-soft:#1c3a63;
+  --gold:#c9a227; --gold-bright:#e3bd3d; --gold-soft:#f3e6bf;
+  --ink:#0d1b2a; --paper:#f7f4ec; --paper-2:#efe9da;
+  --card:#ffffff; --line:#e0d8c4; --muted:#5e6b7a;
+  --green:#2f6f4f; --green-bg:#e3f0e8;
+  --blue:#1f5d8c; --blue-bg:#e3edf5;
+  --plum:#6b3f6e; --plum-bg:#efe3f0;
+  --shadow:0 18px 50px -28px rgba(10,35,66,.55);
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  font-family: 'DM Sans', system-ui, sans-serif;
-  background: var(--surface);
-  color: var(--text);
-  min-height: 100vh;
-  font-size: 15px;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Archivo',system-ui,sans-serif;color:var(--ink);
+  background:
+    radial-gradient(1100px 600px at 88% -8%, rgba(201,162,39,.14), transparent 60%),
+    radial-gradient(900px 700px at -5% 110%, rgba(28,58,99,.10), transparent 55%),
+    var(--paper);
+  min-height:100vh;-webkit-font-smoothing:antialiased;
 }
-.hidden { display: none !important; }
-
-/* ══════════════════════════════════════
-   HEADER
-══════════════════════════════════════ */
-header {
-  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
-  color: #fff;
-  padding: 0 1.5rem;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  box-shadow: 0 2px 12px rgba(0,0,0,.25);
-  position: sticky; top: 0; z-index: 100;
-}
-.logo-mark {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: var(--teal);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'DM Serif Display', serif;
-  font-size: 1rem; color: #fff; flex-shrink: 0;
-  letter-spacing: .5px;
-}
-.header-text h1 { font-size: .95rem; font-weight: 700; line-height: 1.3; }
-.header-text p  { font-size: .72rem; opacity: .65; margin-top: 1px; }
-.header-right { margin-left: auto; }
-#btn-signout {
-  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
-  color: #fff; border-radius: 6px; padding: .35rem .85rem;
-  font-size: .78rem; font-weight: 600; cursor: pointer;
-  transition: background .2s;
-}
-#btn-signout:hover { background: rgba(255,255,255,.22); }
-
-/* ══════════════════════════════════════
-   LAYOUT
-══════════════════════════════════════ */
-.page { max-width: 680px; margin: 0 auto; padding: 2rem 1rem 4rem; }
-
-/* ══════════════════════════════════════
-   CARDS
-══════════════════════════════════════ */
-.card {
-  background: var(--white);
-  border-radius: var(--r);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
-  margin-bottom: 1.25rem;
-  border: 1px solid var(--border);
-}
-.card-head {
-  padding: 1.25rem 1.5rem 0;
-  border-bottom: 2px solid var(--teal);
-  padding-bottom: .75rem;
-  margin-bottom: 1.5rem;
-  display: flex; align-items: center; gap: .5rem;
-}
-.card-head h2 {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.05rem; color: var(--navy);
-}
-.card-body { padding: 0 1.5rem 1.5rem; }
-
-/* ══════════════════════════════════════
-   BUTTONS
-══════════════════════════════════════ */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: .45rem; padding: .7rem 1.4rem;
-  border: none; border-radius: var(--r-sm);
-  font-family: 'DM Sans', sans-serif;
-  font-size: .88rem; font-weight: 600; cursor: pointer;
-  transition: transform .15s, box-shadow .15s, background .15s;
-  text-decoration: none; white-space: nowrap;
-}
-.btn:active  { transform: scale(.97); }
-.btn:disabled{ opacity: .45; cursor: not-allowed; transform: none !important; }
-.btn-primary { background: var(--navy); color: #fff; }
-.btn-primary:hover { background: #162e58; box-shadow: var(--shadow-sm); }
-.btn-teal    { background: var(--teal); color: #fff; }
-.btn-teal:hover { background: #15695b; box-shadow: 0 4px 14px rgba(26,127,110,.3); }
-.btn-gold    { background: var(--gold); color: #fff; }
-.btn-gold:hover { background: #b0882a; }
-.btn-ghost   { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
-.btn-ghost:hover { background: var(--border); }
-.btn-danger  { background: var(--danger); color: #fff; }
-.btn-danger:hover { background: #9e2828; }
-.btn-sm      { padding: .38rem .85rem; font-size: .8rem; }
-.btn-full    { width: 100%; }
-
-/* ══════════════════════════════════════
-   FORMS
-══════════════════════════════════════ */
-.form-group { margin-bottom: 1.1rem; }
-label {
-  display: block; margin-bottom: .4rem;
-  font-size: .82rem; font-weight: 600; color: var(--navy);
-  letter-spacing: .3px;
-}
-label .hint { font-weight: 400; color: var(--muted); }
-select, input[type="text"], input[type="password"], textarea {
-  width: 100%; padding: .7rem 1rem;
-  border: 2px solid var(--border); border-radius: var(--r-sm);
-  font-family: 'DM Sans', sans-serif;
-  font-size: .92rem; color: var(--text); background: #fff;
-  transition: border-color .2s, box-shadow .2s;
-  appearance: none; -webkit-appearance: none;
-}
-select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; padding-right: 2.5rem; }
-select:focus, input:focus, textarea:focus {
-  outline: none; border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(26,127,110,.12);
-}
-textarea { resize: vertical; font-size: .82rem; line-height: 1.6; }
-
-/* ══════════════════════════════════════
-   ALERTS
-══════════════════════════════════════ */
-.alert {
-  padding: .75rem 1rem; border-radius: var(--r-sm);
-  font-size: .85rem; margin-bottom: 1rem;
-  display: flex; align-items: flex-start; gap: .5rem;
-  line-height: 1.5;
-}
-.alert-success { background: var(--teal-light);  color: #0f4f44; border: 1px solid #a7d7cf; }
-.alert-error   { background: var(--danger-light); color: #7a1f1f; border: 1px solid #f0b8b8; }
-.alert-info    { background: #e8f0fd; color: #1a3a8f; border: 1px solid #b8ccf5; }
-.alert-warning { background: var(--gold-light); color: #7a5a10; border: 1px solid #e8cc7a; }
-
-/* ══════════════════════════════════════
-   LANDING
-══════════════════════════════════════ */
-.welcome-hero {
-  text-align: center; padding: 2.5rem 1.5rem 2rem;
-  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-mid) 100%);
-  border-radius: var(--r); color: #fff; margin-bottom: 1.5rem;
-  box-shadow: var(--shadow-lg);
-  position: relative; overflow: hidden;
-}
-.welcome-hero::before {
-  content: ''; position: absolute; top: -40px; right: -40px;
-  width: 200px; height: 200px; border-radius: 50%;
-  background: rgba(255,255,255,.04);
-}
-.welcome-hero::after {
-  content: ''; position: absolute; bottom: -60px; left: -30px;
-  width: 160px; height: 160px; border-radius: 50%;
-  background: rgba(26,127,110,.15);
-}
-.welcome-hero .pre { font-size: .75rem; font-weight: 600; letter-spacing: 2px; opacity: .6; text-transform: uppercase; margin-bottom: .5rem; }
-.welcome-hero h2 { font-family: 'DM Serif Display', serif; font-size: 1.7rem; margin-bottom: .4rem; position: relative; z-index:1; }
-.welcome-hero p { font-size: .85rem; opacity: .7; position: relative; z-index:1; }
-.role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.role-card {
-  border: 2px solid var(--border); border-radius: var(--r);
-  padding: 1.75rem 1.25rem; text-align: center; cursor: pointer;
-  background: #fff; transition: all .25s;
-  box-shadow: var(--shadow-sm);
-}
-.role-card:hover {
-  border-color: var(--teal); transform: translateY(-4px);
-  box-shadow: 0 10px 30px rgba(26,127,110,.15);
-}
-.role-card .role-icon { font-size: 2.4rem; display: block; margin-bottom: .75rem; }
-.role-card h3 { font-size: .95rem; color: var(--navy); margin-bottom: .3rem; font-weight: 700; }
-.role-card p  { font-size: .78rem; color: var(--muted); line-height: 1.4; }
-
-/* ══════════════════════════════════════
-   DATE BAR
-══════════════════════════════════════ */
-.date-bar {
-  background: linear-gradient(135deg, var(--navy), var(--navy-mid));
-  color: #fff; border-radius: 10px; padding: 1rem 1.25rem;
-  margin-bottom: 1.25rem;
-  display: flex; justify-content: space-between; align-items: center;
-}
-.date-bar .d-main { font-family: 'DM Serif Display', serif; font-size: 1.2rem; }
-.date-bar .d-sub  { font-size: .75rem; opacity: .65; margin-top: 2px; }
-.sec-pill {
-  padding: .3rem .8rem; border-radius: 20px;
-  font-size: .75rem; font-weight: 700;
-  background: rgba(255,255,255,.15); color: #fff;
-}
-
-/* ══════════════════════════════════════
-   CONFIRM SCREEN
-══════════════════════════════════════ */
-.confirm-wrap { text-align: center; padding: 1.5rem 1rem 0.5rem; }
-.confirm-icon {
-  width: 80px; height: 80px; border-radius: 50%;
-  background: var(--teal-light); color: var(--teal);
-  font-size: 2.4rem; display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 1.25rem;
-  animation: popIn .4s cubic-bezier(.175,.885,.32,1.275);
-}
-@keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.confirm-wrap h2 { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--teal); margin-bottom: .4rem; }
-.confirm-wrap p  { color: var(--muted); font-size: .88rem; margin-bottom: 1.5rem; }
-.detail-list { display: flex; flex-direction: column; gap: .5rem; margin: 1.25rem 0 1.75rem; text-align: left; }
-.detail-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: .6rem 1rem; background: var(--surface);
-  border-radius: var(--r-sm); font-size: .85rem;
-  border: 1px solid var(--border);
-}
-.detail-row .dl { color: var(--muted); }
-.detail-row .dv { font-weight: 700; color: var(--navy); }
-
-/* ══════════════════════════════════════
-   ADMIN TABS
-══════════════════════════════════════ */
-.tabs { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-.tab {
-  padding: .5rem 1.1rem; border-radius: 7px; cursor: pointer;
-  font-size: .82rem; font-weight: 600;
-  border: 2px solid var(--border); background: #fff;
-  color: var(--muted); transition: all .2s;
-}
-.tab.active  { background: var(--navy); color: #fff; border-color: var(--navy); }
-.tab:hover:not(.active) { border-color: var(--teal); color: var(--teal); }
-.tab-pane { display: none; }
-.tab-pane.active { display: block; }
-
-/* ══════════════════════════════════════
-   STATS
-══════════════════════════════════════ */
-.stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: .75rem; margin-bottom: 1.25rem; }
-.stats-row.cols-2 { grid-template-columns: 1fr 1fr; }
-.stat-box {
-  background: var(--surface); border-radius: 10px;
-  padding: .9rem .75rem; text-align: center;
-  border: 1px solid var(--border);
-}
-.stat-box .s-num { font-family: 'DM Serif Display', serif; font-size: 1.8rem; color: var(--navy); }
-.stat-box .s-num.green  { color: var(--teal); }
-.stat-box .s-num.red    { color: var(--danger); }
-.stat-box .s-lbl { font-size: .72rem; color: var(--muted); margin-top: 2px; letter-spacing: .3px; }
-
-/* ══════════════════════════════════════
-   TABLE
-══════════════════════════════════════ */
-.tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-thead th {
-  background: var(--navy); color: #fff;
-  padding: .65rem 1rem; text-align: left;
-  font-size: .78rem; font-weight: 600; letter-spacing: .4px; text-transform: uppercase;
-  white-space: nowrap;
-}
-tbody td { padding: .6rem 1rem; border-bottom: 1px solid var(--border); }
-tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover td { background: var(--surface); }
-.tbl-meta { font-size: .75rem; color: var(--muted); text-align: right; margin-top: .4rem; }
-.sec-tag {
-  display: inline-flex; padding: .18rem .6rem;
-  border-radius: 12px; font-size: .73rem; font-weight: 700;
-}
-.sec-tag-d25 { background: #dbeafe; color: #1e40af; }
-.sec-tag-dc0 { background: #dcfce7; color: #166534; }
-
-/* ══════════════════════════════════════
-   STUDENT CHIPS
-══════════════════════════════════════ */
-.chip-grid { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .75rem; }
-.chip {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 20px; padding: .28rem .75rem;
-  font-size: .78rem; color: var(--text);
-  display: inline-flex; align-items: center; gap: .3rem;
-}
-.chip .chip-email { color: var(--muted); font-size: .72rem; }
-
-/* ══════════════════════════════════════
-   FILTER ROW
-══════════════════════════════════════ */
-.filter-row {
-  display: grid; grid-template-columns: 1fr 1fr auto;
-  gap: .75rem; align-items: flex-end; margin-bottom: 1rem;
-}
-
-/* ══════════════════════════════════════
-   EMAIL BOX
-══════════════════════════════════════ */
-.email-wrap { margin-top: 1rem; }
-.email-hd {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: .5rem;
-}
-.email-hd strong { font-size: .85rem; color: var(--navy); }
-.email-box {
-  background: #f8f9fb; border: 1px solid var(--border);
-  border-radius: 8px; padding: 1rem 1.1rem;
-  font-size: .78rem; line-height: 1.7; color: var(--text);
-  white-space: pre-wrap; font-family: 'Courier New', monospace;
-  max-height: 340px; overflow-y: auto;
-}
-.email-actions { display: flex; gap: .5rem; margin-top: .75rem; flex-wrap: wrap; }
-
-/* ══════════════════════════════════════
-   PIN SCREEN
-══════════════════════════════════════ */
-.pin-wrap { max-width: 340px; margin: 0 auto; text-align: center; padding: 1rem 0; }
-.pin-icon { font-size: 2.8rem; margin-bottom: .75rem; display: block; }
-.pin-wrap h2 { font-family: 'DM Serif Display', serif; color: var(--navy); margin-bottom: .35rem; font-size: 1.3rem; }
-.pin-wrap p  { color: var(--muted); font-size: .85rem; margin-bottom: 1.5rem; }
-
-/* ══════════════════════════════════════
-   QUICK DATE BUTTONS
-══════════════════════════════════════ */
-.quick-dates { margin-bottom: 1rem; }
-.quick-dates .ql { font-size: .75rem; color: var(--muted); margin-bottom: .4rem; }
-.quick-dates .qd-row { display: flex; flex-wrap: wrap; gap: .35rem; }
-.qd-btn {
-  background: #fff; border: 1px solid var(--border); border-radius: 6px;
-  padding: .3rem .7rem; font-size: .76rem; cursor: pointer;
-  display: inline-flex; align-items: center; gap: .3rem;
-  transition: border-color .15s;
-}
-.qd-btn:hover { border-color: var(--teal); }
-
-/* ══════════════════════════════════════
-   SPINNER
-══════════════════════════════════════ */
-.spinner { text-align: center; padding: 1.5rem; color: var(--muted); font-size: .85rem; }
-
-/* ══════════════════════════════════════
-   BACK LINK
-══════════════════════════════════════ */
-.back-btn {
-  background: none; border: none; cursor: pointer;
-  color: var(--muted); font-size: .82rem; font-family: 'DM Sans', sans-serif;
-  display: inline-flex; align-items: center; gap: .3rem;
-  margin-bottom: .75rem; padding: 0;
-}
-.back-btn:hover { color: var(--navy); }
-
-/* ══════════════════════════════════════
-   SETUP BANNER
-══════════════════════════════════════ */
-.setup-banner {
-  background: var(--gold-light); border: 1px solid #e8cc7a;
-  border-radius: 10px; padding: 1rem 1.25rem;
-  margin-bottom: 1.25rem; font-size: .82rem; line-height: 1.6; color: #5a3e0a;
-}
-.setup-banner strong { display: block; margin-bottom: .3rem; color: #7a5a10; }
-.setup-banner code {
-  background: rgba(0,0,0,.06); border-radius: 4px;
-  padding: .1rem .35rem; font-size: .78rem;
-}
-
-/* ══════════════════════════════════════
-   FOOTER
-══════════════════════════════════════ */
-footer {
-  text-align: center; padding: 2rem 1rem 1rem;
-  color: var(--muted); font-size: .72rem; line-height: 1.8;
-  border-top: 1px solid var(--border); margin-top: 2rem;
-}
-
-/* ══════════════════════════════════════
-   RESPONSIVE
-══════════════════════════════════════ */
-@media(max-width: 480px) {
-  .role-grid  { grid-template-columns: 1fr; }
-  .filter-row { grid-template-columns: 1fr 1fr; }
-  .filter-row .btn { grid-column: 1/-1; }
-  .stats-row  { grid-template-columns: 1fr 1fr; }
-}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px 70px}
+header.masthead{background:linear-gradient(160deg,var(--navy) 0%,var(--navy-2) 60%,var(--navy-soft) 100%);
+  color:#fff;position:relative;overflow:hidden;border-bottom:4px solid var(--gold)}
+header.masthead::after{content:"";position:absolute;inset:0;
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 1px,transparent 1px 46px);pointer-events:none}
+.masthead-inner{max-width:1080px;margin:0 auto;padding:30px 22px 28px;position:relative;z-index:1}
+.crest{display:flex;align-items:center;gap:16px}
+.crest .seal{width:54px;height:54px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 35% 30%,var(--gold-bright),var(--gold) 70%);
+  display:grid;place-items:center;color:var(--navy);font-family:'Fraunces',serif;font-weight:900;font-size:1.45rem;
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.25), 0 6px 18px -6px rgba(0,0,0,.5)}
+.crest .titles small{display:block;letter-spacing:.32em;text-transform:uppercase;font-size:.62rem;color:var(--gold-soft);font-weight:600}
+.crest .titles h1{font-family:'Fraunces',serif;font-weight:600;font-size:1.5rem;line-height:1.05;margin-top:3px}
+.term-tag{margin-top:18px;display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);
+  border:1px solid rgba(227,189,61,.4);padding:7px 15px;border-radius:999px;font-size:.8rem;letter-spacing:.04em}
+.term-tag .dot{width:8px;height:8px;border-radius:50%;background:var(--gold-bright);box-shadow:0 0 0 4px rgba(227,189,61,.18)}
+#termLabel{font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+  padding:30px;margin-top:30px;position:relative}
+.card::before{content:"";position:absolute;left:30px;right:30px;top:0;height:3px;border-radius:3px;
+  background:linear-gradient(90deg,var(--gold),transparent)}
+.intro h2{font-family:'Fraunces',serif;font-weight:600;font-size:1.65rem;color:var(--navy);margin-bottom:4px}
+.intro .lead{color:var(--muted);font-size:1.02rem;margin-bottom:22px;max-width:62ch}
+.steps{display:grid;gap:12px;margin:0 0 26px}
+.step{display:flex;gap:14px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:13px 16px}
+.step .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--navy);color:var(--gold-bright);
+  display:grid;place-items:center;font-weight:700;font-size:.85rem;font-family:'Fraunces',serif}
+.step p{font-size:.93rem;color:var(--ink);line-height:1.45}
+.field-label{display:block;font-weight:600;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:var(--navy);margin-bottom:8px}
+.login-row{display:flex;gap:12px;flex-wrap:wrap}
+input[type=email],input[type=password]{flex:1;min-width:240px;width:100%;font-family:'Archivo',sans-serif;font-size:1.02rem;
+  padding:14px 16px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);
+  transition:border-color .15s, box-shadow .15s}
+input[type=email]:focus,input[type=password]:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px rgba(201,162,39,.18)}
+.welcome{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:12px 15px;margin-bottom:16px;color:var(--navy);font-size:.95rem}
+.linklike{background:none;border:none;color:var(--blue);font-size:.86rem;padding:10px 0 0;text-decoration:underline;cursor:pointer}
+.linklike:hover{color:var(--navy)}
+.secnote{margin-top:10px;font-size:.76rem;color:var(--muted);line-height:1.5;font-style:italic}
+select{font-family:'Archivo',sans-serif;font-size:1rem;padding:12px 16px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);min-width:260px;cursor:pointer}
+select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px rgba(201,162,39,.18)}
+.admin-pill{background:var(--green-bg);color:var(--green);border:1px solid #bfe0cd;padding:7px 14px;border-radius:999px;font-size:.8rem;font-weight:600;white-space:nowrap}
+.block-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.15rem;color:var(--navy);margin:8px 0 12px}
+.mini-pill{display:inline-block;background:var(--green-bg);color:var(--green);font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:6px;vertical-align:middle;margin-left:6px}
+.tot-row td{font-weight:700;color:var(--navy);border-top:2px solid var(--navy);background:var(--paper)!important}
+.detail-head{font-size:.95rem;color:var(--navy);margin:6px 0 12px}
+.detail-head strong{font-family:'Fraunces',serif}
+#adminDetail .chips{margin:0 0 16px}
+button{font-family:'Archivo',sans-serif;font-weight:600;font-size:1rem;cursor:pointer;border:none;border-radius:12px;
+  padding:14px 26px;transition:transform .12s, box-shadow .2s, background .2s}
+.btn-primary{background:var(--navy);color:#fff;box-shadow:0 10px 24px -12px rgba(10,35,66,.7)}
+.btn-primary:hover{background:var(--navy-2);transform:translateY(-2px)}
+.btn-ghost{background:transparent;color:var(--navy);border:1.5px solid var(--line);padding:11px 18px;font-size:.9rem}
+.btn-ghost:hover{border-color:var(--gold);background:var(--paper)}
+.error{color:#9a2b2b;background:#f8e6e3;border:1px solid #e8c4bd;padding:11px 14px;border-radius:10px;margin-top:14px;font-size:.92rem;display:none}
+.error.show{display:block}
+.divider{display:flex;align-items:center;gap:14px;margin:26px 0 18px;color:var(--muted);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+.upload-box{border:1.5px dashed var(--line);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--paper)}
+.upload-box .txt strong{display:block;color:var(--navy);font-size:.95rem}
+.upload-box .txt span{font-size:.82rem;color:var(--muted)}
+#fileInput{display:none}
+#uploadStatus{font-size:.82rem;margin-top:10px;color:var(--green);display:none}
+#uploadStatus.show{display:block}
+.roster{margin-top:18px;font-size:.82rem;color:var(--muted)}
+.roster b{color:var(--navy)}
+.sched-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:6px}
+.sched-head .who small{letter-spacing:.18em;text-transform:uppercase;font-size:.68rem;color:var(--gold);font-weight:600}
+.sched-head .who h2{font-family:'Fraunces',serif;font-weight:600;font-size:1.9rem;color:var(--navy);line-height:1.05}
+.sched-head .who .email{color:var(--muted);font-size:.9rem;margin-top:2px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 22px}
+.chip{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:8px 15px;font-size:.85rem;color:var(--navy)}
+.chip b{font-family:'Fraunces',serif;font-size:1.05rem;margin-right:5px}
+.chip-key{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chip-key b{color:var(--gold-bright)}
+.table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:.94rem;min-width:560px}
+thead th{background:var(--navy);color:#fff;text-align:left;padding:14px 18px;font-weight:600;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+tbody td{padding:14px 18px;border-top:1px solid var(--line);vertical-align:middle}
+tbody tr:nth-child(even){background:#faf8f1}
+tbody tr:hover{background:var(--gold-soft)}
+.time-cell,.room-cell{white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.c-course{font-weight:700;color:var(--navy);font-family:'Fraunces',serif;white-space:nowrap}
+.c-cr{text-align:center;font-weight:600;color:var(--muted)}
+.c-sec{font-weight:700;letter-spacing:.04em}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:600;white-space:nowrap}
+.badge.pres{background:var(--blue-bg);color:var(--blue)}
+.badge.dist{background:var(--green-bg);color:var(--green)}
+.badge.unex{background:#fbe7d2;color:#9a5a12;border:1px solid #e9c89a}
+.chip-unex{background:#9a5a12;color:#fff;border-color:#9a5a12}
+.chip-unex b{color:#fbe3c0}
+.prog-tag{display:inline-block;background:var(--plum-bg);color:var(--plum);padding:3px 9px;border-radius:7px;font-size:.78rem;font-weight:600}
+.day-cell{white-space:nowrap}
+.notes-cell{color:var(--muted);font-size:.85rem}
+.dash{color:var(--line)}
+.foot-actions{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
+.empty-state{text-align:center;padding:30px 10px;color:var(--muted)}
+.empty-state .big{font-family:'Fraunces',serif;font-size:1.3rem;color:var(--navy);margin-bottom:6px}
+.appfoot{text-align:center;color:var(--muted);font-size:.78rem;margin-top:34px;line-height:1.6}
+.appfoot b{color:var(--navy)}
+.hidden{display:none!important}
+@media (max-width:560px){.card{padding:22px}.crest .titles h1{font-size:1.25rem}.sched-head .who h2{font-size:1.5rem}}
+@media print{header.masthead,.foot-actions,.appfoot,.chip-print-hide{display:none}body{background:#fff}.card{box-shadow:none;border:none;margin-top:10px}}
 </style>
 </head>
 <body>
 
-<!-- ══════════ HEADER ══════════ -->
-<header>
-  <div class="logo-mark">IN</div>
-  <div class="header-text">
-    <h1>INGL 3015 · English for Science and Technology</h1>
-    <p>Universidad de Puerto Rico en Arecibo · Attendance System</p>
-  </div>
-  <div class="header-right">
-    <button id="btn-signout" class="hidden" onclick="signOut()">Sign Out</button>
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="crest">
+      <div class="seal">U</div>
+      <div class="titles">
+        <small>University of Puerto Rico · Arecibo</small>
+        <h1>Faculty Course Schedule</h1>
+      </div>
+    </div>
+    <div class="term-tag"><span class="dot"></span><span>English Department &nbsp;·&nbsp; <span id="termLabel">First Semester 2026-2027 · C61</span></span></div>
   </div>
 </header>
 
-<div class="page">
+<div class="wrap">
 
-  <!-- ════════════════════════════════════
-       SCREEN: LANDING
-  ════════════════════════════════════ -->
-  <div id="scr-landing">
-    <div class="welcome-hero">
-      <div class="pre">Academic Year 2026–2027</div>
-      <h2>Class Attendance</h2>
-      <p>INGL 3015 · Dr. Geissa R. Torres Santiago</p>
+  <!-- ============ LOGIN ============ -->
+  <section id="loginView" class="card intro">
+    <h2>Look up your teaching schedule</h2>
+    <p class="lead">This tool shows the courses you will be teaching this term: the section, day, time, and room for each one. The first time you sign in, you create a password to protect your schedule.</p>
+
+    <div class="steps">
+      <div class="step"><div class="n">1</div><p>Type your <b>institutional email</b> (<code>@upr.edu</code>) and click Continue.</p></div>
+      <div class="step"><div class="n">2</div><p><b>First time:</b> create a password. <b>Returning:</b> enter your password.</p></div>
+      <div class="step"><div class="n">3</div><p>Your schedule appears with <b>course, credits, section, day, time, room</b> and modality.</p></div>
     </div>
-    <div id="firebase-warning" class="setup-banner hidden">
-      ⚠️ <strong>Firebase not configured yet</strong>
-      Open this file in a text editor and replace the placeholder values in <code>FIREBASE_CONFIG</code> (around line 400) with your actual Firebase project credentials. See the setup guide below.
-    </div>
-    <div class="role-grid">
-      <div class="role-card" onclick="goStudent()">
-        <span class="role-icon">🎓</span>
-        <h3>I'm a Student</h3>
-        <p>Mark my attendance for today's class</p>
-      </div>
-      <div class="role-card" onclick="goPin()">
-        <span class="role-icon">🔐</span>
-        <h3>Instructor</h3>
-        <p>Dashboard · records · reports</p>
+
+    <!-- Step 1: email -->
+    <div id="authEmail">
+      <label class="field-label" for="emailInput">Institutional email</label>
+      <div class="login-row">
+        <input type="email" id="emailInput" placeholder="firstname.lastname@upr.edu" autocomplete="email" spellcheck="false">
+        <button class="btn-primary" id="continueBtn">Continue</button>
       </div>
     </div>
-  </div>
 
-  <!-- ════════════════════════════════════
-       SCREEN: STUDENT FORM
-  ════════════════════════════════════ -->
-  <div id="scr-student" class="hidden">
-    <button class="back-btn" onclick="show('scr-landing')">← Back</button>
-    <div class="card">
-      <div class="card-head"><span>🎓</span><h2>Mark My Attendance</h2></div>
-      <div class="card-body">
-        <div id="stu-alert"></div>
-        <div class="form-group">
-          <label>Select your section</label>
-          <select id="stu-section" onchange="onSectionPick()">
-            <option value="">— Choose —</option>
-            <option value="D25">Section D25 · Mon &amp; Wed · 2:30–3:50 PM</option>
-            <option value="DC0">Section DC0 · Fridays · 9:00–11:50 AM</option>
-          </select>
-        </div>
-        <div id="stu-name-area" class="hidden">
-          <div class="date-bar">
-            <div>
-              <div class="d-main" id="stu-date-display">—</div>
-              <div class="d-sub" id="stu-schedule-display">—</div>
-            </div>
-            <span class="sec-pill" id="stu-sec-pill">—</span>
-          </div>
-          <div id="stu-day-warn" class="alert alert-warning hidden">
-            ⚠️ Today may not be a regular attendance day for this section. You can still proceed.
-          </div>
-          <div class="form-group">
-            <label>Your name</label>
-            <div id="stu-loading" class="spinner hidden">Loading student list…</div>
-            <select id="stu-name" class="hidden" onchange="onNamePick()">
-              <option value="">— Select your name —</option>
-            </select>
-            <div id="stu-no-list" class="alert alert-info hidden">
-              📋 No student list has been uploaded yet. Please notify your instructor.
-            </div>
-          </div>
-          <button id="stu-submit" class="btn btn-teal btn-full" onclick="submitAttendance()" disabled>
-            ✅ Mark My Attendance
-          </button>
-        </div>
+    <!-- Step 2a: create password (first time) -->
+    <div id="authCreate" class="hidden">
+      <p class="welcome" id="createWelcome"></p>
+      <label class="field-label" for="newPw">Create a password</label>
+      <input type="password" id="newPw" placeholder="At least 4 characters" autocomplete="new-password">
+      <label class="field-label" for="newPw2" style="margin-top:12px">Confirm password</label>
+      <input type="password" id="newPw2" placeholder="Repeat your password" autocomplete="new-password">
+      <div class="login-row" style="margin-top:14px">
+        <button class="btn-primary" id="createBtn">Create &amp; view schedule</button>
+        <button class="btn-ghost" id="createBack">← Back</button>
       </div>
     </div>
-  </div>
 
-  <!-- ════════════════════════════════════
-       SCREEN: CONFIRM
-  ════════════════════════════════════ -->
-  <div id="scr-confirm" class="hidden">
-    <div class="card">
-      <div class="card-body">
-        <div class="confirm-wrap">
-          <div class="confirm-icon">✓</div>
-          <h2>Attendance Recorded!</h2>
-          <p>Your presence has been saved. You're all set.</p>
-          <div class="detail-list" id="confirm-rows"></div>
-          <button class="btn btn-ghost" onclick="show('scr-landing')">← Return to Home</button>
-        </div>
+    <!-- Step 2b: enter password (returning) -->
+    <div id="authSignin" class="hidden">
+      <p class="welcome" id="signinWelcome"></p>
+      <label class="field-label" for="pwInput">Password</label>
+      <input type="password" id="pwInput" placeholder="Your password" autocomplete="current-password">
+      <div class="login-row" style="margin-top:14px">
+        <button class="btn-primary" id="signinBtn">Sign in</button>
+        <button class="btn-ghost" id="signinBack">← Back</button>
+      </div>
+      <button class="linklike" id="forgotBtn">Forgot your password? Reset it</button>
+    </div>
+
+    <div class="error" id="loginError"></div>
+    <p class="roster">Faculty with access configured: <b id="rosterList"></b></p>
+    <p class="secnote">Passwords are stored, encrypted, only in this browser as a convenience lock — they do not sync across devices and are not a substitute for institutional authentication.</p>
+  </section>
+
+  <!-- ============ INDIVIDUAL SCHEDULE ============ -->
+  <section id="schedView" class="card hidden">
+    <div class="sched-head">
+      <div class="who">
+        <small>Teaching schedule</small>
+        <h2 id="profName"></h2>
+        <div class="email" id="profEmail"></div>
+      </div>
+      <div class="chips" id="profChips"></div>
+    </div>
+    <div id="profSchedBody"></div>
+    <div class="foot-actions">
+      <button class="btn-ghost" id="backBtn">← Sign out</button>
+      <button class="btn-primary" id="printBtn">Print / Save PDF</button>
+    </div>
+  </section>
+
+  <!-- ============ ADMIN DASHBOARD ============ -->
+  <section id="adminView" class="card hidden">
+    <div class="sched-head">
+      <div class="who">
+        <small>Administrator</small>
+        <h2 id="adminName"></h2>
+        <div class="email" id="adminEmail"></div>
+      </div>
+      <span class="admin-pill">Full access · all faculty</span>
+    </div>
+
+    <h3 class="block-title">Faculty overview</h3>
+    <div class="table-scroll" id="adminSummaryWrap"></div>
+
+    <h3 class="block-title" style="margin-top:26px">View a professor's schedule</h3>
+    <div class="login-row" style="margin-bottom:6px">
+      <select id="adminSelect"></select>
+    </div>
+    <div id="adminDetail"></div>
+
+    <div class="divider">Load a different term schedule</div>
+    <div class="upload-box">
+      <div class="txt">
+        <strong>Upload Excel (Academic Program tab)</strong>
+        <span>Replaces the current data for this session without reloading the page.</span>
+      </div>
+      <div>
+        <button class="btn-ghost" id="uploadBtn">Choose .xlsx file</button>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
       </div>
     </div>
-  </div>
+    <div id="uploadStatus"></div>
 
-  <!-- ════════════════════════════════════
-       SCREEN: PIN
-  ════════════════════════════════════ -->
-  <div id="scr-pin" class="hidden">
-    <button class="back-btn" onclick="show('scr-landing')">← Back</button>
-    <div class="card">
-      <div class="card-body">
-        <div class="pin-wrap">
-          <span class="pin-icon">🔐</span>
-          <h2>Instructor Access</h2>
-          <p>Enter your PIN to open the dashboard</p>
-          <div class="form-group" style="text-align:left">
-            <label>PIN</label>
-            <input type="password" id="pin-input" placeholder="Enter PIN"
-              onkeydown="if(event.key==='Enter')checkPin()" maxlength="12">
-          </div>
-          <div id="pin-error" class="alert alert-error hidden">❌ Incorrect PIN. Please try again.</div>
-          <button class="btn btn-primary btn-full" onclick="checkPin()">Unlock Dashboard</button>
-        </div>
-      </div>
+    <div class="foot-actions">
+      <button class="btn-ghost" id="adminBack">← Sign out</button>
+      <button class="btn-primary" id="adminPrint">Print / Save PDF</button>
     </div>
-  </div>
+  </section>
 
-  <!-- ════════════════════════════════════
-       SCREEN: ADMIN DASHBOARD
-  ════════════════════════════════════ -->
-  <div id="scr-admin" class="hidden">
-    <div class="card">
-      <div class="card-head"><span>🗂</span><h2>Instructor Dashboard</h2></div>
-      <div class="card-body">
-        <div class="tabs">
-          <div class="tab active"  onclick="switchTab('tp-students')">👥 Students</div>
-          <div class="tab"         onclick="switchTab('tp-attendance')">📅 Attendance</div>
-          <div class="tab"         onclick="switchTab('tp-absent')">📧 Absent List</div>
-        </div>
+  <p class="appfoot">
+    English Department · Office of Academic Affairs, UPRA<br>
+    Data is taken from the <b>Academic Program</b> tab of the term schedule.
+  </p>
+</div>
 
-        <!-- ── TAB: STUDENTS ── -->
-        <div id="tp-students" class="tab-pane active">
-          <div class="form-group">
-            <label>Section</label>
-            <select id="adm-sec-students" onchange="loadStudentAdmin()">
-              <option value="D25">D25 · Mon &amp; Wed</option>
-              <option value="DC0">DC0 · Fridays</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>
-              Upload / Edit Student List
-              <span class="hint"> — one per line: <em>Last Name, First Name</em> &nbsp;or&nbsp; <em>Name | email@upr.edu</em></span>
-            </label>
-            <textarea id="adm-students-txt" rows="9"
-              placeholder="Example:&#10;Torres Santiago, María J.&#10;Rivera López, Juan M. | juan.rivera@upr.edu&#10;Colón Díaz, Ana P."></textarea>
-          </div>
-          <div id="adm-students-alert"></div>
-          <div style="display:flex; gap:.6rem; flex-wrap:wrap;">
-            <button class="btn btn-teal" onclick="saveStudentList()">💾 Save List</button>
-            <button class="btn btn-ghost" onclick="loadStudentAdmin()">🔄 Reload from Firebase</button>
-          </div>
-          <div id="adm-students-current" style="margin-top:1.5rem"></div>
-        </div>
-
-        <!-- ── TAB: ATTENDANCE ── -->
-        <div id="tp-attendance" class="tab-pane">
-          <div class="filter-row">
-            <div>
-              <label>Section</label>
-              <select id="att-section">
-                <option value="D25">D25</option>
-                <option value="DC0">DC0</option>
-              </select>
-            </div>
-            <div>
-              <label>Date <span class="hint">(YYYY-MM-DD)</span></label>
-              <input type="text" id="att-date" placeholder="e.g. 2025-09-10">
-            </div>
-            <button class="btn btn-primary" onclick="loadAttendance()">🔍 Load</button>
-          </div>
-          <div id="att-quick" class="quick-dates"></div>
-          <div id="att-alert"></div>
-          <div id="att-stats" class="hidden">
-            <div class="stats-row" id="att-stats-row"></div>
-          </div>
-          <div id="att-table"></div>
-          <div id="att-dl" class="hidden" style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:1rem;">
-            <button class="btn btn-teal btn-sm" onclick="dlExcelDate()">📥 Download This Date</button>
-            <button class="btn btn-ghost btn-sm" onclick="dlExcelAll()">📥 Download All Records</button>
-          </div>
-        </div>
-
-        <!-- ── TAB: ABSENT ── -->
-        <div id="tp-absent" class="tab-pane">
-          <div class="filter-row">
-            <div>
-              <label>Section</label>
-              <select id="abs-section">
-                <option value="D25">D25</option>
-                <option value="DC0">DC0</option>
-              </select>
-            </div>
-            <div>
-              <label>Date <span class="hint">(YYYY-MM-DD)</span></label>
-              <input type="text" id="abs-date" placeholder="e.g. 2025-09-10">
-            </div>
-            <button class="btn btn-primary" onclick="genAbsent()">🔍 Generate</button>
-          </div>
-          <div id="abs-alert"></div>
-          <div id="abs-result" class="hidden">
-            <div class="stats-row cols-2" id="abs-stats"></div>
-            <div class="email-wrap">
-              <div class="email-hd">
-                <strong>📧 Email Draft</strong>
-                <button class="btn btn-sm btn-ghost" onclick="copyEmail()">📋 Copy Text</button>
-              </div>
-              <div class="email-box" id="abs-email"></div>
-              <div class="email-actions">
-                <button class="btn btn-teal btn-sm" onclick="openMailto()">✉️ Open in Email Client</button>
-                <button class="btn btn-ghost btn-sm" onclick="copyEmail()">📋 Copy</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /card-body -->
-    </div><!-- /card -->
-  </div>
-
-</div><!-- /page -->
-
-<footer>
-  INGL 3015 · Attendance System · Universidad de Puerto Rico en Arecibo<br>
-  Dr. Geissa R. Torres Santiago · English Department
-</footer>
-
-
-<!-- ══════════════════════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════════════════════ -->
 <script>
+/* ====================== CONFIG: FACULTY ======================
+   To add a professor: add their name as it appears in the Excel (UPPERCASE)
+   and their email. Matching is case- and accent-insensitive. */
+const PROFESSORS = {
+  "MONIQUE":  {name:"Monique Guidicelli", email:"monique.guidicelli@upr.edu"},
+  "KEVIN":    {name:"Kevin Kelly",        email:"kevin.kelly@upr.edu"},
+  "LIZETTE":  {name:"Lizette Rosa",       email:"lizette.rosa@upr.edu"},
+  "JESUS":    {name:"Jesús Ramírez",      email:"jesus.ramirez1@upr.edu"},
+  "MATEO":    {name:"Mateo Garcés",       email:"mateo.garces@upr.edu"},
+  "MARISOL":  {name:"Marisol Santiago",   email:"marisol.santiago1@upr.edu"},
+  "CARLOS":   {name:"Carlos González",    email:"carlos.gonzalez28@upr.edu"},
+  "GEISSA":   {name:"Geissa Torres",      email:"geissa.torres@upr.edu", admin:true},
+  "YANIRE":   {name:"Yaniré Díaz",        email:"yanire.diaz@upr.edu"},
+  "DESIREE":  {name:"Desirée Salaberríos", email:"desiree.salaberrio@upr.edu", admin:true, staff:true}
+};
+const PROF_KEYS = Object.keys(PROFESSORS);
+/* Teaching faculty only (excludes non-teaching admins/staff) used for rosters and overview. */
+const TEACH_KEYS = PROF_KEYS.filter(k=>!PROFESSORS[k].staff);
 
-/* ╔══════════════════════════════════════════╗
-   ║  1. CONFIGURATION — EDIT THIS SECTION   ║
-   ╚══════════════════════════════════════════╝
-
-   STEP 1 ➜ Go to https://console.firebase.google.com
-   STEP 2 ➜ Open your project → Project Settings → Your apps
-   STEP 3 ➜ Copy the firebaseConfig values and paste below
-   STEP 4 ➜ In Firebase console → Realtime Database → Rules
-            paste:  { "rules": { ".read": true, ".write": true } }
-            (for a more secure version, contact your IT department)
-*/
-
-const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyCX0a485qRPEDiihSv-O3A_7OIcTddq-A8",
-  authDomain:        "ingl3015-attendance.firebaseapp.com",
-  databaseURL:       "https://ingl3015-attendance-default-rtdb.firebaseio.com",
-  projectId:         "ingl3015-attendance",
-  storageBucket:     "ingl3015-attendance.firebasestorage.app",
-  messagingSenderId: "360676861626",
-  appId:             "1:360676861626:web:f910207ce17882432ec483"
+/* Program / cohort labels (edit freely). Keys are the codes used in the Excel. */
+const PROGRAM_LABELS = {
+  "ENFERMERIA":"Nursing", "BIOLOGIA":"Biology", "EDUCACION":"Education",
+  "COMU":"Communications", "CCOM":"CCOM", "GTEC":"GTEC", "ADEM":"ADEM"
 };
 
-/* 🔑 Change this to any PIN you want for admin access */
-const ADMIN_PIN = "3015";
+/* Courses paid through UNEX (for record-keeping). Format: "COURSE SECTION". Edit freely. */
+const UNEX = new Set([
+  "INCO 3025 D40","INGL 3093 D56","INGL 3102 D41","INGL 3318 D55","INGL 3061 D40",
+  "INGL 3093 D55","INGL 3102 D40","INGL 3015 D55","INGL 3093 M25","INGL 3201 D57",
+  "INGL 3201 D56","INGL 3101 LE5","INCO 4008 D40"
+]);
+function isUnex(c){return UNEX.has(c.course+" "+c.section);}
 
-/* Section definitions */
-const SECTIONS = {
-  D25: {
-    label:    "Section D25",
-    schedule: "Mon & Wed · 2:30–3:50 PM",
-    classDay: 3   // Wednesday (0=Sun … 6=Sat)
-  },
-  DC0: {
-    label:    "Section DC0",
-    schedule: "Fridays · 9:00–11:50 AM",
-    classDay: 5   // Friday
+/* Credits per course: every course is 3 credits except the overrides below. */
+const CREDIT_DEFAULT = 3;
+const CREDIT_OVERRIDES = { "INCO 3025": 2 };
+function courseCredits(course){
+  return (course in CREDIT_OVERRIDES) ? CREDIT_OVERRIDES[course] : CREDIT_DEFAULT;
+}
+
+function norm(s){return (s||"").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();}
+function profKeyFromEmail(email){const e=norm(email);for(const k of PROF_KEYS){if(norm(PROFESSORS[k].email)===e)return k;}return null;}
+/* tolerant name match: exact, or schedule name is a prefix/first-name of full name */
+function nameMatches(scheduleName, fullName){
+  const a=norm(scheduleName), b=norm(fullName);
+  if(!a) return false;
+  if(a===b) return true;
+  return b.split(" ")[0]===a.split(" ")[0] && (b.startsWith(a)||a.startsWith(b));
+}
+
+/* ====================== EMBEDDED DATA (TERM C61) ====================== */
+let COURSES = [{"course":"INGL 3093","section":"LD0","professor":"Marisol Santiago","day":"Monday & Wednesday","time":"10:00-11:30","room":"AC-201","modality":"In person","program":"","notes":""},{"course":"INGL 3093","section":"LE5","professor":"Marisol Santiago","day":"Monday & Wednesday","time":"11:30-12:50","room":"AC-201","modality":"In person","program":"Education","notes":""},{"course":"INGL 3093","section":"L10","professor":"Marisol Santiago","day":"Monday & Wednesday","time":"1:00-2:20","room":"AC-201","modality":"In person","program":"","notes":""},{"course":"INGL 3093","section":"D55","professor":"Monique Guidicelli","day":"Monday & Wednesday","time":"5:30-6:50","room":"Online","modality":"Online","program":"Nursing","notes":""},{"course":"INGL 3103","section":"LB5","professor":"Monique Guidicelli","day":"Monday & Wednesday","time":"8:30-9:50","room":"AC-202","modality":"In person","program":"","notes":""},{"course":"INGL 3101","section":"QD0","professor":"Monique Guidicelli","day":"Monday & Wednesday","time":"10:00-11:30","room":"AC-202","modality":"In person","program":"","notes":""},{"course":"INGL 3101","section":"LE5","professor":"Monique Guidicelli","day":"Monday & Wednesday","time":"11:30-12:50","room":"AC-202","modality":"In person","program":"CCOM","notes":"10 reserved seats"},{"course":"INGL 3101","section":"L25","professor":"Lizette Rosa","day":"Monday & Wednesday","time":"2:30-3:50","room":"AC-202","modality":"In person","program":"Education","notes":""},{"course":"INGL 3318","section":"D55","professor":"Kevin Kelly","day":"Monday & Wednesday","time":"5:30-6:50","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3101","section":"LB5","professor":"Carlos González","day":"Monday & Wednesday","time":"8:30-9:50","room":"AC-203","modality":"In person","program":"ADEM","notes":""},{"course":"INGL 3101","section":"LD1","professor":"Carlos González","day":"Monday & Wednesday","time":"10:00-11:30","room":"AC-203","modality":"In person","program":"ADEM","notes":""},{"course":"INGL 3101","section":"Q10","professor":"Carlos González","day":"Monday & Wednesday","time":"1:00-2:20","room":"AC-203","modality":"In person","program":"CCOM","notes":"10 reserved seats"},{"course":"INGL 3101","section":"Q25","professor":"Carlos González","day":"Monday & Wednesday","time":"2:30-3:50","room":"AC-203","modality":"In person","program":"Education","notes":""},{"course":"INCO 4008","section":"D40","professor":"Carlos González","day":"Monday & Wednesday","time":"4:00-5:20","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3101","section":"QB5","professor":"Lizette Rosa","day":"Monday & Wednesday","time":"8:30-9:50","room":"AC-204","modality":"In person","program":"ADEM","notes":""},{"course":"INGL 3101","section":"LD0","professor":"Yaniré Díaz","day":"Monday & Wednesday","time":"10:00-11:30","room":"AC-204","modality":"In person","program":"Biology","notes":""},{"course":"INGL 3101","section":"QE6","professor":"Lizette Rosa","day":"Monday & Wednesday","time":"11:30-12:50","room":"AC-204","modality":"In person","program":"","notes":""},{"course":"INGL 3101","section":"L11","professor":"Yaniré Díaz","day":"Monday & Wednesday","time":"1:00-2:20","room":"AC-204","modality":"In person","program":"Biology","notes":""},{"course":"INGL 3011","section":"L25","professor":"Yaniré Díaz","day":"Monday & Wednesday","time":"2:30-3:50","room":"AC-204","modality":"In person","program":"","notes":""},{"course":"INCO 3025","section":"D40","professor":"Lizette Rosa","day":"Monday (only)","time":"4:00-5:20","room":"Online","modality":"Online","program":"GTEC","notes":""},{"course":"INGL 3015","section":"D55","professor":"Mateo Garcés","day":"Monday & Wednesday","time":"5:30-6:50","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3102","section":"D41","professor":"Kevin Kelly","day":"Monday & Wednesday","time":"4:00-5:20","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3201","section":"D57","professor":"Yaniré Díaz","day":"Monday & Wednesday","time":"5:30-6:50","room":"Online","modality":"Online","program":"","notes":""},{"course":"INCO 3005","section":"DB5","professor":"Jesús Ramírez","day":"Monday & Wednesday","time":"8:30-9:50","room":"Online","modality":"Online","program":"GTEC","notes":""},{"course":"INGL 3015","section":"D25","professor":"Geissa Torres","day":"Monday & Wednesday","time":"2:30-3:50","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3102","section":"D40","professor":"Mateo Garcés","day":"Monday & Wednesday","time":"4:00-5:20","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3201","section":"D55","professor":"Jesús Ramírez","day":"Monday & Wednesday","time":"5:30-6:50","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3015","section":"DC0","professor":"Geissa Torres","day":"Friday","time":"9:00-11:50","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3061","section":"D40","professor":"Monique Guidicelli","day":"Monday & Wednesday","time":"4:00-5:20","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3093","section":"ME5","professor":"Marisol Santiago","day":"Tuesday & Thursday","time":"11:30-12:50","room":"AC-201","modality":"In person","program":"","notes":""},{"course":"INGL 3093","section":"M10","professor":"Marisol Santiago","day":"Tuesday & Thursday","time":"1:00-2:20","room":"AC-201","modality":"In person","program":"","notes":""},{"course":"INGL 3093","section":"M25","professor":"Marisol Santiago","day":"Tuesday & Thursday","time":"2:30-3:50","room":"AC-201","modality":"In person","program":"","notes":""},{"course":"INGL 3093","section":"D56","professor":"Lizette Rosa","day":"Tuesday & Thursday","time":"5:30-6:50","room":"Online","modality":"Online","program":"Nursing","notes":""},{"course":"INGL 3101","section":"MA0","professor":"Monique Guidicelli","day":"Tuesday & Thursday","time":"7:00-8:20","room":"AC-202","modality":"In person","program":"Nursing","notes":""},{"course":"INGL 3103","section":"MB5","professor":"Kevin Kelly","day":"Tuesday & Thursday","time":"8:30-9:50","room":"AC-203","modality":"In person","program":"Biology","notes":""},{"course":"INGL 3103","section":"ME5","professor":"Kevin Kelly","day":"Tuesday & Thursday","time":"11:30-12:50","room":"AC-202","modality":"In person","program":"Biology","notes":""},{"course":"INGL 3103","section":"M10","professor":"Kevin Kelly","day":"Tuesday & Thursday","time":"1:00-2:20","room":"AC-202","modality":"In person","program":"Communications","notes":""},{"course":"INGL 3101","section":"QA0","professor":"Lizette Rosa","day":"Tuesday & Thursday","time":"7:00-8:20","room":"AC-203","modality":"In person","program":"Nursing","notes":""},{"course":"INGL 3101","section":"ME5","professor":"Yaniré Díaz","day":"Tuesday & Thursday","time":"11:30-12:50","room":"AC-203","modality":"In person","program":"GTEC","notes":""},{"course":"INGL 3101","section":"QB6","professor":"Monique Guidicelli","day":"Tuesday & Thursday","time":"8:30-9:50","room":"AC-202","modality":"In person","program":"Biology","notes":""},{"course":"INGL 3101","section":"QE5","professor":"Mateo Garcés","day":"Tuesday & Thursday","time":"11:30-12:50","room":"AC-204","modality":"In person","program":"Communications","notes":""},{"course":"INGL 3101","section":"M10","professor":"Mateo Garcés","day":"Tuesday & Thursday","time":"1:00-2:20","room":"AC-306","modality":"In person","program":"Communications","notes":""},{"course":"INGL 3101","section":"M25","professor":"Mateo Garcés","day":"Tuesday & Thursday","time":"2:30-3:50","room":"AC-306","modality":"In person","program":"Biology","notes":""},{"course":"INGL 3015","section":"D40","professor":"Mateo Garcés","day":"Tuesday & Thursday","time":"4:00-5:20","room":"Online","modality":"Online","program":"","notes":""},{"course":"INCO 4008","section":"DB5","professor":"Jesús Ramírez","day":"Tuesday & Thursday","time":"8:30-9:50","room":"Online","modality":"Online","program":"","notes":""},{"course":"INCO 4008","section":"D10","professor":"Jesús Ramírez","day":"Tuesday & Thursday","time":"1:00-2:20","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3221","section":"D40","professor":"Kevin Kelly","day":"Tuesday & Thursday","time":"4:00-5:20","room":"Online","modality":"Online","program":"","notes":""},{"course":"INGL 3201","section":"D56","professor":"Yaniré Díaz","day":"Tuesday & Thursday","time":"5:30-6:50","room":"Online","modality":"Online","program":"","notes":""}];
+
+/* ====================== EXCEL PARSER (for uploading other schedules) ====================== */
+const COURSE_RE=/(INGL|INCO)\s*(\d{4})/i;
+const SEC_RE=/\b([LMQD](?:[A-E]\d|\d{2}))\b\.?/i;
+const TIME_RE=/\d{1,2}:\d{2}\s*[-\u2013]\s*\d{1,2}:\d{2}/;
+
+function cleanRoom(s){s=(s||"").replace(/\s+/g," ").trim();const m=s.match(/AC[- ]?\d+/i);
+  if(m){return m[0].replace(/\s/,"-").toUpperCase();}return s;}
+
+function parseGrid(grid){
+  const n=grid.length;
+  const cell=(r,c)=>(grid[r]&&grid[r][c]!=null)?String(grid[r][c]).trim():"";
+  const rowText=r=>(grid[r]||[]).map(x=>String(x==null?"":x));
+  let mjDiv=-1;
+  for(let r=0;r<n;r++){if(rowText(r).filter(v=>v.trim().toUpperCase()==="MJ").length>=4){mjDiv=r;break;}}
+  if(mjDiv<0)mjDiv=Math.floor(n/2);
+  const tm=r=>rowText(r).filter(v=>TIME_RE.test(v)).length;
+  let lwTimeRow=-1,lwBest=0,mjTimeRow=-1,mjBest=0;
+  for(let r=0;r<n;r++){const m=tm(r);if(m>=2){if(r<mjDiv&&m>lwBest){lwBest=m;lwTimeRow=r;}if(r>mjDiv&&m>mjBest){mjBest=m;mjTimeRow=r;}}}
+  if(lwTimeRow<0)lwTimeRow=Math.max(0,mjDiv-3);
+  if(mjTimeRow<0)mjTimeRow=mjDiv+2;
+  const friCols=new Set();
+  for(let r=0;r<=lwTimeRow+1&&r<n;r++){rowText(r).forEach((v,c)=>{if(/FRIDAY/i.test(v))friCols.add(c);});}
+  const rooms={};let cur="";
+  for(let r=0;r<n;r++){const a=cell(r,0);if(a)cur=a;rooms[r]=cur;}
+  const out=[];
+  const maxC=Math.max(...grid.map(row=>row?row.length:0),12);
+  const band=r=>(r>lwTimeRow&&r<mjDiv)?"LW":(r>mjTimeRow?"MJ":null);
+  const PROG_KEYS=Object.keys(PROGRAM_LABELS);
+  for(let r=0;r<n;r++){
+    const bd=band(r);if(!bd)continue;
+    for(let c=1;c<maxC;c++){
+      const t=cell(r,c);
+      if(!t||!COURSE_RE.test(t))continue;
+      const cm=t.match(COURSE_RE);const course=cm[1].toUpperCase()+" "+cm[2];
+      const sm=t.match(SEC_RE);const section=sm?sm[1].toUpperCase():"";
+      let prof="";
+      for(const k of PROF_KEYS){if(new RegExp("\\b"+k+"\\b","i").test(t)){prof=PROFESSORS[k].name;break;}}
+      const distance=/DISTANCIA/i.test(t)||section.charAt(0)==="D";
+      const lunes=/LUNES SOLAMENTE/i.test(t);
+      let day=friCols.has(c)?"Friday":(bd==="LW"?(lunes?"Monday (only)":"Monday & Wednesday"):"Tuesday & Thursday");
+      let time=(friCols.has(c)||bd==="LW")?cell(lwTimeRow,c):cell(mjTimeRow,c);
+      const room=distance?"Online":cleanRoom(rooms[r]);
+      const progs=[];
+      for(const k of PROG_KEYS){if(new RegExp("\\b"+k+"\\b","i").test(t)&&!progs.includes(PROGRAM_LABELS[k]))progs.push(PROGRAM_LABELS[k]);}
+      const program=progs.join(" / ");
+      let notes=t.replace(COURSE_RE,"");
+      if(sm)notes=notes.replace(sm[0],"");
+      notes=notes.replace(/DISTANCIA/ig,"").replace(/LUNES SOLAMENTE/ig,"").replace(/\bESPACIOS?\b/ig,"");
+      for(const k of PROF_KEYS)notes=notes.replace(new RegExp("\\b"+k+"\\b","ig"),"");
+      for(const k of PROG_KEYS)notes=notes.replace(new RegExp("\\b"+k+"\\b","ig"),"");
+      notes=notes.replace(/\s+/g," ").replace(/^[\s.]+|[\s.]+$/g,"");
+      const num=notes.match(/\b(\d+)\b/);
+      notes=num?num[1]+" reserved seats":"";
+      out.push({course,section,professor:prof,day,time,room,modality:distance?"Online":"In person",program,notes});
+    }
   }
+  return out;
+}
+
+/* ====================== UI ====================== */
+const $=id=>document.getElementById(id);
+$("rosterList").textContent=TEACH_KEYS.map(k=>PROFESSORS[k].name).join(" · ");
+
+/* ---- local (per-browser) password storage with graceful fallback ---- */
+const mem={};
+const store={
+  get(k){try{return localStorage.getItem(k);}catch(e){return (k in mem)?mem[k]:null;}},
+  set(k,v){try{localStorage.setItem(k,v);}catch(e){mem[k]=v;}},
+  remove(k){try{localStorage.removeItem(k);}catch(e){delete mem[k];}}
 };
+const pwKey=email=>"fsched_pw_"+norm(email);
+async function sha256(str){
+  try{
+    const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+  }catch(e){
+    let h=5381;for(let i=0;i<str.length;i++){h=((h<<5)+h)+str.charCodeAt(i);h|=0;}
+    return "f"+(h>>>0).toString(16);
+  }
+}
 
-/* ╔══════════════════════════════════════════╗
-   ║  2. FIREBASE INIT                        ║
-   ╚══════════════════════════════════════════╝ */
-let db = null;
-let firebaseOk = false;
+function showError(m){const e=$("loginError");e.textContent=m;e.classList.add("show");}
+function clearError(){$("loginError").classList.remove("show");}
+function showStep(which){
+  ["authEmail","authCreate","authSignin"].forEach(id=>$(id).classList.toggle("hidden",id!==which));
+}
 
-try {
-  firebase.initializeApp(FIREBASE_CONFIG);
-  db = firebase.database();
-  // Quick connectivity test
-  db.ref('.info/connected').once('value', snap => {
-    firebaseOk = snap.val() === true;
+let pendingKey=null, pendingEmail="";
+
+function onContinue(){
+  clearError();
+  const email=$("emailInput").value.trim();
+  if(!email){showError("Please enter your institutional email to continue.");return;}
+  const key=profKeyFromEmail(email);
+  if(!key){showError("That email is not in the configured faculty list. Make sure it is typed correctly (e.g., firstname.lastname@upr.edu).");return;}
+  pendingKey=key; pendingEmail=PROFESSORS[key].email;
+  const name=PROFESSORS[key].name.split(" ")[0];
+  if(store.get(pwKey(pendingEmail))){
+    $("signinWelcome").textContent="Welcome back, "+name+". Enter your password to continue.";
+    showStep("authSignin"); $("pwInput").value=""; $("pwInput").focus();
+  }else{
+    $("createWelcome").textContent="First time here, "+name+". Create a password to protect your schedule.";
+    showStep("authCreate"); $("newPw").value=""; $("newPw2").value=""; $("newPw").focus();
+  }
+}
+async function onCreate(){
+  clearError();
+  const p1=$("newPw").value, p2=$("newPw2").value;
+  if(p1.length<4){showError("Your password must be at least 4 characters.");return;}
+  if(p1!==p2){showError("The two passwords do not match. Please try again.");return;}
+  store.set(pwKey(pendingEmail), await sha256(p1));
+  proceed();
+}
+async function onSignin(){
+  clearError();
+  const p=$("pwInput").value;
+  const stored=store.get(pwKey(pendingEmail));
+  if(stored && (await sha256(p))===stored){ proceed(); }
+  else { showError("Incorrect password. Please try again, or use “Forgot your password?” to reset it."); }
+}
+function onForgot(){
+  store.remove(pwKey(pendingEmail));
+  clearError();
+  const name=PROFESSORS[pendingKey].name.split(" ")[0];
+  $("createWelcome").textContent="Password reset, "+name+". Create a new password.";
+  showStep("authCreate"); $("newPw").value=""; $("newPw2").value=""; $("newPw").focus();
+}
+function backToEmail(){ clearError(); showStep("authEmail"); $("emailInput").focus(); }
+
+function proceed(){
+  const prof=PROFESSORS[pendingKey];
+  if(prof.admin) renderAdmin(prof); else renderProfSchedule(prof);
+}
+
+/* ---- shared schedule building ---- */
+const DAY_ORDER={"Monday & Wednesday":1,"Monday (only)":2,"Tuesday & Thursday":3,"Friday":4};
+function timeStart(t){const m=(t||"").match(/(\d{1,2}):(\d{2})/);if(!m)return 9999;let h=+m[1];const mm=+m[2];if(h<7)h+=12;return h*60+mm;}
+function coursesFor(prof,key){return COURSES.filter(c=>nameMatches(c.professor,prof.name)||(key&&norm(c.professor)===norm(key)));}
+function sortSched(list){return list.slice().sort((a,b)=>(DAY_ORDER[a.day]||9)-(DAY_ORDER[b.day]||9)||timeStart(a.time)-timeStart(b.time));}
+function statsOf(list){const pres=list.filter(c=>c.modality==="In person").length;
+  return{total:list.length,credits:list.reduce((s,c)=>s+courseCredits(c.course),0),preps:new Set(list.map(c=>c.course)).size,pres,dist:list.length-pres,unex:list.filter(isUnex).length};}
+function chipsHTML(s){return '<span class="chip"><b>'+s.total+'</b>courses</span>'+
+  '<span class="chip chip-key"><b>'+s.credits+'</b>total credits</span>'+
+  '<span class="chip chip-key"><b>'+s.preps+'</b>preparations</span>'+
+  '<span class="chip chip-print-hide"><b>'+s.pres+'</b>in person</span>'+
+  '<span class="chip chip-print-hide"><b>'+s.dist+'</b>online</span>'+
+  (s.unex>0?'<span class="chip chip-unex"><b>'+s.unex+'</b>UNEX</span>':'');}
+function tableHTML(list){
+  if(list.length===0) return '<div class="empty-state"><div class="big">No courses found</div><div>There are no courses assigned to this professor in the loaded schedule.</div></div>';
+  const dash='<span class="dash">—</span>';
+  let rows='';
+  for(const c of sortSched(list)){
+    const badge=c.modality==="Online"?'<span class="badge dist">Online</span>':'<span class="badge pres">In person</span>';
+    rows+='<tr>'+
+      '<td class="c-course">'+c.course+'</td>'+
+      '<td class="c-cr">'+courseCredits(c.course)+'</td>'+
+      '<td class="c-sec">'+(c.section||dash)+'</td>'+
+      '<td class="day-cell">'+c.day+'</td>'+
+      '<td class="time-cell">'+(c.time||dash)+'</td>'+
+      '<td class="room-cell">'+(c.room||dash)+'</td>'+
+      '<td>'+badge+'</td>'+
+      '<td>'+(isUnex(c)?'<span class="badge unex">UNEX</span>':dash)+'</td></tr>';
+  }
+  return '<div class="table-scroll"><table><thead><tr><th>Course</th><th>Cr.</th><th>Section</th><th>Day</th><th>Time</th><th>Room</th><th>Modality</th><th>UNEX</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function showView(id){["loginView","schedView","adminView"].forEach(v=>$(v).classList.toggle("hidden",v!==id));window.scrollTo({top:0,behavior:"smooth"});}
+
+function renderProfSchedule(prof){
+  const mine=coursesFor(prof,pendingKey);
+  $("profName").textContent=prof.name;
+  $("profEmail").textContent=prof.email;
+  $("profChips").innerHTML=chipsHTML(statsOf(mine));
+  $("profSchedBody").innerHTML=tableHTML(mine);
+  showView("schedView");
+}
+
+/* ---- admin dashboard ---- */
+function renderAdmin(admin){
+  $("adminName").textContent=admin.name;
+  $("adminEmail").textContent=admin.email;
+  // summary table
+  let totC=0,totCr=0;
+  let rows='';
+  const sel=$("adminSelect"); sel.innerHTML='';
+  TEACH_KEYS.forEach(k=>{
+    const prof=PROFESSORS[k];
+    const mine=coursesFor(prof,k);
+    const s=statsOf(mine);
+    totC+=s.total; totCr+=s.credits;
+    rows+='<tr data-key="'+k+'"><td class="c-course">'+prof.name+(prof.admin?' <span class="mini-pill">admin</span>':'')+'</td>'+
+      '<td class="c-cr">'+s.total+'</td><td class="c-cr">'+s.credits+'</td><td class="c-cr">'+s.preps+'</td>'+
+      '<td class="c-cr">'+s.pres+'</td><td class="c-cr">'+s.dist+'</td></tr>';
+    const opt=document.createElement("option"); opt.value=k; opt.textContent=prof.name; sel.appendChild(opt);
   });
-} catch(e) {
-  console.warn("Firebase init failed:", e.message);
-  document.getElementById('firebase-warning').classList.remove('hidden');
+  $("adminSummaryWrap").innerHTML='<table><thead><tr><th>Professor</th><th>Courses</th><th>Credits</th><th>Preps</th><th>In&nbsp;person</th><th>Online</th></tr></thead><tbody>'+rows+
+    '<tr class="tot-row"><td>Total ('+TEACH_KEYS.length+' faculty)</td><td class="c-cr">'+totC+'</td><td class="c-cr">'+totCr+'</td><td class="c-cr">—</td><td class="c-cr">—</td><td class="c-cr">—</td></tr>'+
+    '</tbody></table>';
+  // clickable rows
+  $("adminSummaryWrap").querySelectorAll("tr[data-key]").forEach(tr=>{
+    tr.style.cursor="pointer";
+    tr.addEventListener("click",()=>{sel.value=tr.dataset.key; renderAdminDetail(tr.dataset.key);});
+  });
+  // selector
+  sel.value=admin._key||TEACH_KEYS[0];
+  renderAdminDetail(sel.value);
+  showView("adminView");
+}
+function renderAdminDetail(key){
+  const prof=PROFESSORS[key];
+  const mine=coursesFor(prof,key);
+  $("adminDetail").innerHTML=
+    '<div class="detail-head"><strong>'+prof.name+'</strong> · '+prof.email+'</div>'+
+    '<div class="chips">'+chipsHTML(statsOf(mine))+'</div>'+
+    tableHTML(mine);
 }
 
-/* ╔══════════════════════════════════════════╗
-   ║  3. UTILITIES                            ║
-   ╚══════════════════════════════════════════╝ */
+/* ---- events ---- */
+$("continueBtn").addEventListener("click",onContinue);
+$("emailInput").addEventListener("keydown",e=>{if(e.key==="Enter")onContinue();});
+$("createBtn").addEventListener("click",onCreate);
+$("newPw2").addEventListener("keydown",e=>{if(e.key==="Enter")onCreate();});
+$("createBack").addEventListener("click",backToEmail);
+$("signinBtn").addEventListener("click",onSignin);
+$("pwInput").addEventListener("keydown",e=>{if(e.key==="Enter")onSignin();});
+$("signinBack").addEventListener("click",backToEmail);
+$("forgotBtn").addEventListener("click",onForgot);
+$("adminSelect").addEventListener("change",e=>renderAdminDetail(e.target.value));
 
-function localDate(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
+function signOut(){clearError();showStep("authEmail");$("emailInput").value="";pendingKey=null;pendingEmail="";showView("loginView");$("emailInput").focus();}
+$("backBtn").addEventListener("click",signOut);
+$("adminBack").addEventListener("click",signOut);
+$("printBtn").addEventListener("click",()=>window.print());
+$("adminPrint").addEventListener("click",()=>window.print());
 
-function todayStr() { return localDate(); }
-
-function dayNum() { return new Date().getDay(); }
-
-function longDate(ds) {
-  const [y, m, d] = ds.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  return dt.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-}
-
-function fmtTime(ts) {
-  return new Date(ts).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-}
-
-function setAlert(id, type, html) {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = `<div class="alert alert-${type}">${html}</div>`;
-}
-function clearAlert(id) {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = '';
-}
-
-/* ╔══════════════════════════════════════════╗
-   ║  4. SCREEN NAVIGATION                    ║
-   ╚══════════════════════════════════════════╝ */
-const ALL_SCREENS = ['scr-landing','scr-student','scr-confirm','scr-pin','scr-admin'];
-
-function show(id) {
-  ALL_SCREENS.forEach(s => document.getElementById(s).classList.add('hidden'));
-  document.getElementById(id).classList.remove('hidden');
-  window.scrollTo(0, 0);
-}
-
-function goStudent() {
-  const sec = document.getElementById('stu-section');
-  const d   = dayNum();
-  sec.value = d === 3 ? 'D25' : d === 5 ? 'DC0' : '';
-  show('scr-student');
-  if (sec.value) onSectionPick();
-}
-
-function goPin() {
-  document.getElementById('pin-input').value = '';
-  document.getElementById('pin-error').classList.add('hidden');
-  show('scr-pin');
-  setTimeout(() => document.getElementById('pin-input').focus(), 100);
-}
-
-function signOut() {
-  document.getElementById('btn-signout').classList.add('hidden');
-  show('scr-landing');
-}
-
-/* ╔══════════════════════════════════════════╗
-   ║  5. STUDENT FLOW                         ║
-   ╚══════════════════════════════════════════╝ */
-
-async function onSectionPick() {
-  const sec  = document.getElementById('stu-section').value;
-  const area = document.getElementById('stu-name-area');
-  if (!sec) { area.classList.add('hidden'); return; }
-
-  area.classList.remove('hidden');
-
-  // Date bar
-  const td = todayStr();
-  document.getElementById('stu-date-display').textContent  = longDate(td);
-  document.getElementById('stu-schedule-display').textContent = SECTIONS[sec].schedule;
-  document.getElementById('stu-sec-pill').textContent = sec;
-
-  // Day warning
-  const isClassDay = dayNum() === SECTIONS[sec].classDay;
-  document.getElementById('stu-day-warn').classList.toggle('hidden', isClassDay);
-
-  // Load names
-  await loadNameDropdown(sec);
-}
-
-async function loadNameDropdown(sec) {
-  const loading = document.getElementById('stu-loading');
-  const sel     = document.getElementById('stu-name');
-  const noList  = document.getElementById('stu-no-list');
-  const btn     = document.getElementById('stu-submit');
-
-  loading.classList.remove('hidden');
-  sel.classList.add('hidden');
-  noList.classList.add('hidden');
-  btn.disabled = true;
-  clearAlert('stu-alert');
-
-  try {
-    const snap = await db.ref(`ingl3015/students/${sec}`).get();
-    loading.classList.add('hidden');
-
-    if (!snap.exists() || !snap.val()) {
-      noList.classList.remove('hidden');
-      return;
+$("uploadBtn").addEventListener("click",()=>$("fileInput").click());
+$("fileInput").addEventListener("change",function(){
+  const f=this.files[0];if(!f)return;
+  const st=$("uploadStatus");st.classList.remove("show");
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+      const sheetName=wb.SheetNames.find(s=>/academic program/i.test(s))||wb.SheetNames[0];
+      const grid=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,raw:false,defval:""});
+      const parsed=parseGrid(grid);
+      if(parsed.length===0)throw new Error("No courses detected in the «"+sheetName+"» tab.");
+      COURSES=parsed;
+      st.style.color="var(--green)";
+      st.textContent="✓ Loaded "+parsed.length+" courses from «"+f.name+"» (tab: "+sheetName+"). Refreshing overview…";
+      st.classList.add("show");
+      renderAdmin(PROFESSORS[pendingKey]); // refresh dashboard with new data
+      $("uploadStatus").classList.add("show");
+    }catch(err){
+      st.style.color="#9a2b2b";
+      st.textContent="Could not process the file: "+err.message;
+      st.classList.add("show");
     }
-
-    const list = Object.values(snap.val()).sort((a,b) => a.name.localeCompare(b.name, 'es'));
-    sel.innerHTML = '<option value="">— Select your name —</option>';
-    list.forEach(s => {
-      const o = document.createElement('option');
-      o.value = s.name; o.textContent = s.name;
-      sel.appendChild(o);
-    });
-    sel.classList.remove('hidden');
-
-  } catch(err) {
-    loading.classList.add('hidden');
-    setAlert('stu-alert', 'error', '⚠️ Could not load student list. Check your connection.');
-    console.error(err);
-  }
-}
-
-function onNamePick() {
-  document.getElementById('stu-submit').disabled =
-    document.getElementById('stu-name').value === '';
-}
-
-async function submitAttendance() {
-  const sec  = document.getElementById('stu-section').value;
-  const name = document.getElementById('stu-name').value;
-  const btn  = document.getElementById('stu-submit');
-  if (!sec || !name) return;
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Saving…';
-  clearAlert('stu-alert');
-
-  const dt = todayStr();
-
-  try {
-    // Duplicate check
-    const existing = await db.ref(`ingl3015/attendance/${sec}/${dt}`).get();
-    if (existing.exists() && existing.val()) {
-      const already = Object.values(existing.val()).some(r => r.name === name);
-      if (already) {
-        setAlert('stu-alert', 'warning',
-          `⚠️ <strong>${name}</strong> has already marked attendance today.`);
-        btn.disabled = false;
-        btn.textContent = '✅ Mark My Attendance';
-        return;
-      }
-    }
-
-    const ts = Date.now();
-    const timeIn = new Date(ts).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-    await db.ref(`ingl3015/attendance/${sec}/${dt}`).push({ name, timestamp: ts, timeIn });
-
-    // Show confirm screen
-    document.getElementById('confirm-rows').innerHTML = `
-      <div class="detail-row"><span class="dl">Name</span><span class="dv">${name}</span></div>
-      <div class="detail-row"><span class="dl">Section</span><span class="dv">${sec} · ${SECTIONS[sec].schedule}</span></div>
-      <div class="detail-row"><span class="dl">Date</span><span class="dv">${longDate(dt)}</span></div>
-      <div class="detail-row"><span class="dl">Time In</span><span class="dv">${timeIn}</span></div>
-    `;
-    show('scr-confirm');
-
-  } catch(err) {
-    setAlert('stu-alert', 'error', '⚠️ Failed to save. Please try again or notify your instructor.');
-    btn.disabled = false;
-    btn.textContent = '✅ Mark My Attendance';
-    console.error(err);
-  }
-}
-
-/* ╔══════════════════════════════════════════╗
-   ║  6. ADMIN — PIN                          ║
-   ╚══════════════════════════════════════════╝ */
-
-function checkPin() {
-  const val = document.getElementById('pin-input').value.trim();
-  if (val === ADMIN_PIN) {
-    document.getElementById('pin-error').classList.add('hidden');
-    document.getElementById('btn-signout').classList.remove('hidden');
-    show('scr-admin');
-    initAdmin();
-  } else {
-    document.getElementById('pin-error').classList.remove('hidden');
-    document.getElementById('pin-input').value = '';
-    document.getElementById('pin-input').focus();
-  }
-}
-
-function initAdmin() {
-  const t = todayStr();
-  document.getElementById('att-date').value = t;
-  document.getElementById('abs-date').value = t;
-  buildQuickDates();
-  loadStudentAdmin();
-}
-
-/* ╔══════════════════════════════════════════╗
-   ║  7. ADMIN — TABS                         ║
-   ╚══════════════════════════════════════════╝ */
-function switchTab(id) {
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  const idx = ['tp-students','tp-attendance','tp-absent'].indexOf(id);
-  document.querySelectorAll('.tab')[idx]?.classList.add('active');
-}
-
-/* ╔══════════════════════════════════════════╗
-   ║  8. ADMIN — STUDENTS TAB                 ║
-   ╚══════════════════════════════════════════╝ */
-
-async function saveStudentList() {
-  const sec = document.getElementById('adm-sec-students').value;
-  const raw = document.getElementById('adm-students-txt').value.trim();
-  clearAlert('adm-students-alert');
-
-  if (!raw) {
-    setAlert('adm-students-alert', 'warning', 'Please paste the student list first.');
-    return;
-  }
-
-  const lines    = raw.split('\n').map(l => l.trim()).filter(Boolean);
-  const students = lines.map(line => {
-    const parts = line.split('|');
-    return { name: parts[0].trim(), email: parts[1] ? parts[1].trim() : '' };
-  }).filter(s => s.name);
-
-  if (!students.length) {
-    setAlert('adm-students-alert', 'warning', 'No valid names found. Each line needs at least a name.');
-    return;
-  }
-
-  try {
-    const obj = {};
-    students.forEach((s, i) => { obj[`s${String(i).padStart(3,'0')}`] = s; });
-    await db.ref(`ingl3015/students/${sec}`).set(obj);
-    setAlert('adm-students-alert', 'success',
-      `✅ ${students.length} students saved for Section ${sec}.`);
-    loadStudentAdmin();
-  } catch(err) {
-    setAlert('adm-students-alert', 'error', '⚠️ Save failed. Check your Firebase connection.');
-    console.error(err);
-  }
-}
-
-async function loadStudentAdmin() {
-  const sec  = document.getElementById('adm-sec-students').value;
-  const wrap = document.getElementById('adm-students-current');
-  wrap.innerHTML = '<div class="spinner">Loading…</div>';
-
-  try {
-    const snap = await db.ref(`ingl3015/students/${sec}`).get();
-    if (!snap.exists() || !snap.val()) {
-      wrap.innerHTML = '<div class="alert alert-info">No students uploaded yet for this section.</div>';
-      document.getElementById('adm-students-txt').value = '';
-      return;
-    }
-
-    const list = Object.values(snap.val()).sort((a,b) => a.name.localeCompare(b.name,'es'));
-    document.getElementById('adm-students-txt').value =
-      list.map(s => s.email ? `${s.name} | ${s.email}` : s.name).join('\n');
-
-    wrap.innerHTML = `
-      <strong style="font-size:.82rem; color:var(--navy)">
-        Section ${sec} · ${list.length} students enrolled
-      </strong>
-      <div class="chip-grid">
-        ${list.map(s => `
-          <div class="chip">
-            👤 ${s.name}
-            ${s.email ? `<span class="chip-email">&nbsp;${s.email}</span>` : ''}
-          </div>`).join('')}
-      </div>`;
-  } catch(err) {
-    wrap.innerHTML = '<div class="alert alert-error">Failed to load. Check Firebase connection.</div>';
-  }
-}
-
-/* ╔══════════════════════════════════════════╗
-   ║  9. ADMIN — ATTENDANCE TAB               ║
-   ╚══════════════════════════════════════════╝ */
-
-function buildQuickDates() {
-  const dates = [];
-  for (let i = 0; i < 60 && dates.length < 8; i++) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const dow = d.getDay();
-    if (dow === 3 || dow === 5) {
-      dates.push({ date: localDate(d), sec: dow === 3 ? 'D25' : 'DC0' });
-    }
-  }
-  document.getElementById('att-quick').innerHTML = `
-    <div class="ql">Quick select recent class dates:</div>
-    <div class="qd-row">
-      ${dates.map(d =>
-        `<button class="qd-btn" onclick="quickLoad('${d.date}','${d.sec}')">
-          ${d.date} <span class="sec-tag sec-tag-${d.sec.toLowerCase()}">${d.sec}</span>
-        </button>`
-      ).join('')}
-    </div>`;
-}
-
-function quickLoad(date, sec) {
-  document.getElementById('att-date').value    = date;
-  document.getElementById('att-section').value = sec;
-  loadAttendance();
-}
-
-let curRecords = [], curSec = '', curDate = '';
-
-async function loadAttendance() {
-  const sec  = document.getElementById('att-section').value;
-  const date = document.getElementById('att-date').value.trim();
-  const tbl  = document.getElementById('att-table');
-  const stats = document.getElementById('att-stats');
-
-  clearAlert('att-alert');
-  tbl.innerHTML = '';
-  stats.classList.add('hidden');
-  document.getElementById('att-dl').classList.add('hidden');
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    setAlert('att-alert', 'warning', 'Please enter date as YYYY-MM-DD (e.g. 2025-09-10)');
-    return;
-  }
-
-  tbl.innerHTML = '<div class="spinner">Loading records…</div>';
-  curSec = sec; curDate = date;
-
-  try {
-    const [attSnap, stuSnap] = await Promise.all([
-      db.ref(`ingl3015/attendance/${sec}/${date}`).get(),
-      db.ref(`ingl3015/students/${sec}`).get()
-    ]);
-
-    const total = stuSnap.exists() ? Object.keys(stuSnap.val()).length : 0;
-
-    if (!attSnap.exists() || !attSnap.val()) {
-      tbl.innerHTML = `<div class="alert alert-info">No attendance records for Section ${sec} on ${date}.</div>`;
-      return;
-    }
-
-    curRecords = Object.values(attSnap.val()).sort((a,b) => a.timestamp - b.timestamp);
-    const present = curRecords.length;
-    const absent  = total > 0 ? total - present : '—';
-
-    stats.classList.remove('hidden');
-    document.getElementById('att-stats-row').innerHTML = `
-      <div class="stat-box"><div class="s-num green">${present}</div><div class="s-lbl">Present</div></div>
-      <div class="stat-box"><div class="s-num red">${absent}</div><div class="s-lbl">Absent</div></div>
-      <div class="stat-box"><div class="s-num">${total || '—'}</div><div class="s-lbl">Enrolled</div></div>
-    `;
-
-    tbl.innerHTML = `
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr><th>#</th><th>Student Name</th><th>Time In</th><th>Section</th></tr>
-          </thead>
-          <tbody>
-            ${curRecords.map((r,i) => `
-              <tr>
-                <td>${i+1}</td>
-                <td>${r.name}</td>
-                <td>${r.timeIn || fmtTime(r.timestamp)}</td>
-                <td><span class="sec-tag sec-tag-${sec.toLowerCase()}">${sec}</span></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-      <p class="tbl-meta">${present} record${present!==1?'s':''} · ${longDate(date)}</p>`;
-
-    document.getElementById('att-dl').classList.remove('hidden');
-
-  } catch(err) {
-    tbl.innerHTML = '<div class="alert alert-error">⚠️ Failed to load records. Check Firebase.</div>';
-    console.error(err);
-  }
-}
-
-/* ╔══════════════════════════════════════════╗
-   ║  10. EXCEL EXPORT                        ║
-   ╚══════════════════════════════════════════╝ */
-
-function dlExcelDate() {
-  if (!curRecords.length) return;
-  const rows = curRecords.map((r,i) => ({
-    '#':            i + 1,
-    'Student Name': r.name,
-    'Section':      curSec,
-    'Date':         curDate,
-    'Day':          longDate(curDate),
-    'Time In':      r.timeIn || fmtTime(r.timestamp)
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{wch:4},{wch:32},{wch:10},{wch:13},{wch:28},{wch:10}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, `${curSec}_${curDate}`);
-  XLSX.writeFile(wb, `INGL3015_${curSec}_${curDate}.xlsx`);
-}
-
-async function dlExcelAll() {
-  try {
-    const snap = await db.ref('ingl3015/attendance').get();
-    if (!snap.exists()) { alert('No attendance records found.'); return; }
-
-    const rows = [];
-    const data = snap.val();
-    Object.entries(data).sort().forEach(([sec, dates]) => {
-      Object.entries(dates).sort().forEach(([dt, records]) => {
-        Object.values(records)
-          .sort((a,b) => a.timestamp - b.timestamp)
-          .forEach(r => {
-            rows.push({
-              'Student Name': r.name,
-              'Section':      sec,
-              'Date':         dt,
-              'Day':          longDate(dt),
-              'Time In':      r.timeIn || fmtTime(r.timestamp)
-            });
-          });
-      });
-    });
-
-    rows.forEach((r,i) => r['#'] = i + 1);
-    const ordered = rows.map(r => ({ '#': r['#'], 'Student Name': r['Student Name'],
-      'Section': r.Section, 'Date': r.Date, 'Day': r.Day, 'Time In': r['Time In'] }));
-
-    const ws = XLSX.utils.json_to_sheet(ordered);
-    ws['!cols'] = [{wch:4},{wch:32},{wch:10},{wch:13},{wch:28},{wch:10}];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'All Attendance');
-    XLSX.writeFile(wb, `INGL3015_AllAttendance_${todayStr()}.xlsx`);
-
-  } catch(err) {
-    alert('Download failed. Check your Firebase connection.');
-    console.error(err);
-  }
-}
-
-/* ╔══════════════════════════════════════════╗
-   ║  11. ABSENT LIST & EMAIL                 ║
-   ╚══════════════════════════════════════════╝ */
-
-let emailText = '';
-let mailtoHref = '';
-
-async function genAbsent() {
-  const sec  = document.getElementById('abs-section').value;
-  const date = document.getElementById('abs-date').value.trim();
-  const res  = document.getElementById('abs-result');
-  clearAlert('abs-alert');
-  res.classList.add('hidden');
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    setAlert('abs-alert', 'warning', 'Please enter date as YYYY-MM-DD');
-    return;
-  }
-
-  try {
-    const [attSnap, stuSnap] = await Promise.all([
-      db.ref(`ingl3015/attendance/${sec}/${date}`).get(),
-      db.ref(`ingl3015/students/${sec}`).get()
-    ]);
-
-    if (!stuSnap.exists() || !stuSnap.val()) {
-      setAlert('abs-alert', 'warning',
-        `No student list for Section ${sec}. Upload it in the Students tab first.`);
-      return;
-    }
-
-    const all     = Object.values(stuSnap.val()).sort((a,b) => a.name.localeCompare(b.name,'es'));
-    const present = attSnap.exists() && attSnap.val()
-      ? new Set(Object.values(attSnap.val()).map(r => r.name))
-      : new Set();
-
-    const absent   = all.filter(s => !present.has(s.name));
-    const pCount   = all.length - absent.length;
-
-    document.getElementById('abs-stats').innerHTML = `
-      <div class="stat-box"><div class="s-num green">${pCount}</div><div class="s-lbl">Present</div></div>
-      <div class="stat-box"><div class="s-num red">${absent.length}</div><div class="s-lbl">Absent</div></div>`;
-
-    if (!absent.length) {
-      emailText = `🎉 All ${all.length} students marked attendance for Section ${sec} on ${longDate(date)}.`;
-      document.getElementById('abs-email').textContent = emailText;
-      res.classList.remove('hidden');
-      return;
-    }
-
-    const nameLines  = absent.map(s => `  • ${s.name}`).join('\n');
-    const emailAddrs = absent.filter(s => s.email).map(s => s.email).join('; ');
-
-    emailText = `Subject: INGL 3015 – Attendance Reminder (${date})
-
-Dear Student,
-
-Our records show that your attendance was not recorded for:
-
-  Course:   INGL 3015 – English for Science and Technology
-  Section:  ${sec}
-  Date:     ${longDate(date)}
-
-Students not recorded as present:
-${nameLines}
-
-If you were present and believe this is an error, please contact me as soon as possible.
-
-Please review the attendance policy in your course syllabus (prontuario).
-
-Respectfully,
-Dr. Geissa R. Torres Santiago
-INGL 3015 – English for Science and Technology
-English Department · Universidad de Puerto Rico en Arecibo`;
-
-    document.getElementById('abs-email').textContent = emailText;
-    mailtoHref = emailAddrs
-      ? `mailto:${emailAddrs}?subject=${encodeURIComponent(`INGL 3015 – Attendance Reminder (${date})`)}&body=${encodeURIComponent(emailText.split('\n').slice(3).join('\n'))}`
-      : '';
-
-    res.classList.remove('hidden');
-
-    if (!emailAddrs) {
-      setAlert('abs-alert', 'info',
-        'ℹ️ No email addresses on file. Add them in the Students tab (Name | email@upr.edu) to enable the mailto button.');
-    }
-
-  } catch(err) {
-    setAlert('abs-alert', 'error', '⚠️ Failed to generate absent list.');
-    console.error(err);
-  }
-}
-
-function copyEmail() {
-  if (!emailText) return;
-  const btn = event?.target;
-  navigator.clipboard.writeText(emailText)
-    .then(() => {
-      if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = '📋 Copy', 2200); }
-    })
-    .catch(() => {
-      // Fallback
-      const ta = document.createElement('textarea');
-      ta.value = emailText;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = '📋 Copy', 2200); }
-    });
-}
-
-function openMailto() {
-  if (mailtoHref) { window.location.href = mailtoHref; }
-  else { alert('No email addresses on file. Add emails in the Students tab first.'); }
-}
-
+  };
+  reader.readAsArrayBuffer(f);
+});
 </script>
 </body>
 </html>
