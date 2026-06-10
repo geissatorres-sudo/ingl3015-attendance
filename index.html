@@ -7366,25 +7366,26 @@ function doTextArt(stageId, style){
 //  credentials (from Firebase Console → Project Settings → Your apps)
 // ════════════════════════════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey: "AIzaSyDyerkXQpDd15egdxfKEEPcruetn1AjMm4",
-  authDomain: "ingl3015-docdesign-b3d77.firebaseapp.com",
-  projectId: "ingl3015-docdesign-b3d77",
-  storageBucket: "ingl3015-docdesign-b3d77.firebasestorage.app",
+  apiKey:            "AIzaSyDyerkXQpDd15egdxfKEEPcruetn1AjMm4",
+  authDomain:        "ingl3015-docdesign-b3d77.firebaseapp.com",
+  projectId:         "ingl3015-docdesign-b3d77",
+  storageBucket:     "ingl3015-docdesign-b3d77.firebasestorage.app",
   messagingSenderId: "1098507126112",
-  appId: "1:1098507126112:web:aee9748f55c93a7e930a05"
+  appId:             "1:1098507126112:web:aee9748f55c93a7e930a05"
 };
 
 let _db = null;
 function initFirebase(){
   try{
-    if(!FIREBASE_CONFIG.apiKey.startsWith('PASTE')){
-      firebase.initializeApp(FIREBASE_CONFIG);
-      _db = firebase.firestore();
-      console.log('Firebase connected ✓');
-    } else {
-      console.warn('Firebase not configured — cloud save disabled');
-    }
-  } catch(e){ console.warn('Firebase init error:', e); }
+    firebase.initializeApp(firebaseConfig);
+    _db = firebase.firestore();
+    console.log('Firebase connected ✓');
+    setCloudStatus('saved','☁️ Connected');
+    setTimeout(()=>setCloudStatus('','☁️ Ready'),2000);
+  } catch(e){
+    console.warn('Firebase init error:', e);
+    setCloudStatus('error','⚠️ No cloud');
+  }
 }
 
 // ── Serialize one canvas to a plain object ──────────────────────────
