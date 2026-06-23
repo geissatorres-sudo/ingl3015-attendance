@@ -6862,14 +6862,17 @@ async function generateReport(){
           }
         }
         const cvs = await html2canvas(target,{
-          scale:1.5,
+          scale:1.2,
           allowTaint:true,
           useCORS:true,
           logging:false,
           backgroundColor:'#ffffff',
-          width: target.scrollWidth,
-          height: target.scrollHeight,
+          width: target.offsetWidth || target.scrollWidth || 800,
+          height: target.offsetHeight || target.scrollHeight || 600,
+          windowWidth: 1200,
+          windowHeight: 900,
         });
+        console.log(`Captured ${ex_stages[i]}: ${cvs.width}x${cvs.height}`);
         imgSrc = cvs.toDataURL('image/png');
       }
     } catch(err){ console.warn('Capture failed for '+ex_stages[i]+':', err); }
@@ -7739,100 +7742,118 @@ function serializeCanvas(stageId){
 // ── Restore one canvas from saved data ──────────────────────────────
 function restoreCanvas(stageId, elements){
   if(!elements||!elements.length){ console.log('restoreCanvas '+stageId+': no elements'); return; }
-  const stage=document.getElementById(stageId);
+  const stage = document.getElementById(stageId);
   if(!stage){ console.warn('restoreCanvas '+stageId+': STAGE NOT FOUND'); return; }
   console.log('restoreCanvas '+stageId+': restoring '+elements.length+' elements...');
 
-  // Clear existing elements
-  stage.querySelectorAll('.cel,.cel-depth-shadow,.cel-pp-effect').forEach(e=>e.remove());
-  const st=getState(stageId);
+  // Clear any existing elements first
+  stage.querySelectorAll('.cel, .cel-depth-shadow, .cel-pp-effect').forEach(e=>e.remove());
+  const st = getState(stageId);
 
-  elements.forEach(data=>{
-    const el=document.createElement('div');
-    el.className='cel cel-'+(data.type||'shape');
-    el.dataset.type        = data.type||'shape';
-    el.dataset.id          = data.id||('cel_'+Math.random().toString(36).slice(2,7));
-    el.dataset.activeShape = data.activeShape||'';
-    el.dataset.rotation    = data.rotation||'0';
-    el.dataset.flipX       = data.flipX||'1';
-    el.dataset.flipY       = data.flipY||'1';
-    if(data.isStepBlock === '1'){
-      el.dataset.isStepBlock = '1';
-      el.setAttribute('data-is-step-block','1');
-    }
-
-    // Apply all saved styles
-    const s = data.styles || {};
-    Object.keys(s).forEach(prop=>{
-      if(s[prop] !== undefined && s[prop] !== '' && s[prop] !== 'normal' && s[prop] !== 'none'){
-        try { el.style[prop] = s[prop]; } catch(e){}
-      }
-    });
-
-    // Restore content (innerHTML preserves everything: text, shape parts, step circles)
-    if(data.html !== undefined){
-      el.innerHTML = data.html;
-    }
-
-    // For image elements where src was stripped, show placeholder
-    if(data.type==='image' && data.imgSrc === '__large__'){
-      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:.72rem;text-align:center;padding:.3rem;">📷 Re-upload image</div>';
-    } else if(data.type==='image' && data.imgSrc && !el.querySelector('img')){
-      // Image src present but HTML missing img tag — rebuild
-      const img = document.createElement('img');
-      img.src = data.imgSrc;
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;';
-      el.appendChild(img);
-    }
-
+  elements.forEach((data, idx)=>{
     try {
-      setupCel(el, stageId);
-      addResizeHandles(el);
+      const el = document.createElement('div');
+      el.className = 'cel cel-' + (data.type||'shape');
+      el.dataset.type        = data.type||'shape';
+      el.dataset.id          = data.id||('cel_'+Math.random().toString(36).slice(2,7));
+      el.dataset.activeShape = data.activeShape||'';
+      el.dataset.rotation    = data.rotation||'0';
+      el.dataset.flipX       = data.flipX||'1';
+      el.dataset.flipY       = data.flipY||'1';
+      if(data.isStepBlock === '1'){
+        el.dataset.isStepBlock = '1';
+        el.setAttribute('data-is-step-block','1');
+      }
+
+      // Apply saved styles
+      const s = data.styles || {};
+      Object.keys(s).forEach(prop=>{
+        const val = s[prop];
+        if(val !== undefined && val !== '' && val !== 'normal' && val !== 'none' && val !== '0px'){
+          try { el.style[prop] = val; } catch(e){}
+        }
+      });
+
+      // Ensure absolute positioning is set (in case it was lost)
+      if(!el.style.position) el.style.position = 'absolute';
+      if(!el.style.left) el.style.left = (20 + idx*20)+'px';
+      if(!el.style.top)  el.style.top  = (20 + idx*20)+'px';
+
+      // For image elements: rebuild the img tag from imgSrc
+      if(data.type === 'image'){
+        if(data.imgSrc && data.imgSrc !== '__large__'){
+          const img = document.createElement('img');
+          img.src = data.imgSrc;
+          img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;';
+          el.appendChild(img);
+        } else if(data.imgSrc === '__large__'){
+          el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:.72rem;text-align:center;padding:.3rem;">📷 Re-upload image</div>';
+        } else if(data.html){
+          el.innerHTML = data.html;
+        }
+      } else {
+        // Shapes, text, step blocks — restore from innerHTML
+        if(data.html !== undefined){
+          el.innerHTML = data.html;
+        }
+      }
+
+      // Setup interactions
+      try {
+        setupCel(el, stageId);
+        addResizeHandles(el);
+      } catch(setupErr){
+        console.error('setupCel failed:', setupErr);
+      }
+
       stage.appendChild(el);
-    } catch(setupErr){
-      console.error('❌ setupCel failed for element:', data, setupErr);
-    }
 
-    // Re-attach step block circle dblclick handler if it's a step block
-    if(data.isStepBlock === '1'){
-      const circle = el.querySelector('.step-circle');
-      if(circle){
-        circle.addEventListener('dblclick', function(ev){
-          ev.stopPropagation();
-          circle.contentEditable='true';
-          circle.style.cursor='text';
-          circle.focus();
-          const range=document.createRange();
-          range.selectNodeContents(circle);
-          const sel=window.getSelection();
-          sel.removeAllRanges(); sel.addRange(range);
-        });
-        circle.addEventListener('blur', function(){
-          circle.contentEditable='false';
-          circle.style.cursor='pointer';
-        });
+      // Re-attach step block handlers if needed
+      if(data.isStepBlock === '1'){
+        const circle = el.querySelector('.step-circle');
+        if(circle && !circle._handlersAttached){
+          circle._handlersAttached = true;
+          circle.addEventListener('dblclick', function(ev){
+            ev.stopPropagation();
+            circle.contentEditable='true';
+            circle.style.cursor='text';
+            circle.focus();
+            const range=document.createRange();
+            range.selectNodeContents(circle);
+            const sel=window.getSelection();
+            sel.removeAllRanges(); sel.addRange(range);
+          });
+          circle.addEventListener('blur', function(){
+            circle.contentEditable='false';
+            circle.style.cursor='pointer';
+          });
+        }
+        const txt = el.querySelector('.step-text');
+        if(txt && !txt._handlersAttached){
+          txt._handlersAttached = true;
+          txt.addEventListener('dblclick', function(ev){
+            ev.stopPropagation();
+            txt.contentEditable='true';
+            txt.style.cursor='text';
+            txt.focus();
+          });
+          txt.addEventListener('blur', function(){
+            txt.contentEditable='false';
+            txt.style.cursor='';
+          });
+        }
       }
-      // Re-attach text dblclick
-      const txt = el.querySelector('.step-text');
-      if(txt){
-        txt.addEventListener('dblclick', function(ev){
-          ev.stopPropagation();
-          txt.contentEditable='true';
-          txt.style.cursor='text';
-          txt.focus();
-        });
-        txt.addEventListener('blur', function(){
-          txt.contentEditable='false';
-          txt.style.cursor='';
-        });
-      }
-    }
 
-    const n = parseInt((data.id||'').replace(/\D/g,''))||0;
-    if(st && n >= st.nextId) st.nextId = n + 1;
+      const n = parseInt((data.id||'').replace(/\D/g,''))||0;
+      if(st && n >= st.nextId) st.nextId = n + 1;
+
+    } catch(elErr){
+      console.error('Failed to restore element #'+idx+':', elErr, data);
+    }
   });
 
-  console.log('restoreCanvas '+stageId+': ✓ done');
+  const actualCount = stage.querySelectorAll('.cel').length;
+  console.log('restoreCanvas '+stageId+': ✓ '+actualCount+'/'+elements.length+' elements visible');
 }
 // ════════════════════════════════════════════════════════════════════
 //  FIREBASE CLOUD SAVE  — uses Firestore REST API (no SDK required)
@@ -7912,8 +7933,7 @@ async function cloudSave(){
         if(el.dataset.type==='image'){
           const img=el.querySelector('img');
           if(img){
-            obj.imgSrc = (img.src.startsWith('data:') && img.src.length > 200000)
-              ? '__large__' : img.src;
+            obj.imgSrc = img.src;  // keep full image — compression will handle size
           }
         }
         return obj;
